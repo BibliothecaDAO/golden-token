@@ -5,8 +5,11 @@ use starknet::ContractAddress;
 
 #[starknet::contract]
 mod ERC721 {
+    use core::traits::TryInto;
     use array::SpanTrait;
     use openzeppelin::account;
+
+    use openzeppelin::access::ownable;
     use openzeppelin::introspection::dual_src5::DualCaseSRC5;
     use openzeppelin::introspection::dual_src5::DualCaseSRC5Trait;
     use openzeppelin::introspection::interface::ISRC5;
@@ -17,8 +20,14 @@ mod ERC721 {
     use openzeppelin::token::erc721::interface;
     use option::OptionTrait;
     use starknet::ContractAddress;
-    use starknet::get_caller_address;
+    use starknet::{get_caller_address, get_block_timestamp};
     use zeroable::Zeroable;
+    use openzeppelin::token::erc20::interface::{
+        IERC20Camel, IERC20CamelDispatcher, IERC20CamelDispatcherTrait, IERC20CamelLibraryDispatcher
+    };
+
+    const ETH: felt252 = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
+    const MINT_COST: u256 = 131088770000000000;
 
     #[storage]
     struct Storage {
@@ -29,14 +38,29 @@ mod ERC721 {
         _token_approvals: LegacyMap<u256, ContractAddress>,
         _operator_approvals: LegacyMap<(ContractAddress, ContractAddress), bool>,
         _token_uri: LegacyMap<u256, felt252>,
+        _open_edition_end: u256,
+        _count: u256,
+        _open: bool,
+        _owner: ContractAddress,
+        _last_use: u256,
+        _usage_count: LegacyMap<u256, u256>,
+        _dao: ContractAddress
     }
+
 
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         Transfer: Transfer,
         Approval: Approval,
-        ApprovalForAll: ApprovalForAll
+        ApprovalForAll: ApprovalForAll,
+        OwnershipTransferred: OwnershipTransferred
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct OwnershipTransferred {
+        previous_owner: ContractAddress,
+        new_owner: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -61,8 +85,16 @@ mod ERC721 {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, name: felt252, symbol: felt252) {
+    fn constructor(
+        ref self: ContractState,
+        name: felt252,
+        symbol: felt252,
+        owner: ContractAddress,
+        dao: ContractAddress
+    ) {
         self.initializer(name, symbol);
+        self._owner.write(owner);
+        self._dao.write(dao);
     }
 
     //
@@ -74,14 +106,6 @@ mod ERC721 {
         fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
             let unsafe_state = src5::SRC5::unsafe_new_contract_state();
             src5::SRC5::SRC5Impl::supports_interface(@unsafe_state, interface_id)
-        }
-    }
-
-    #[external(v0)]
-    impl SRC5CamelImpl of ISRC5Camel<ContractState> {
-        fn supportsInterface(self: @ContractState, interfaceId: felt252) -> bool {
-            let unsafe_state = src5::SRC5::unsafe_new_contract_state();
-            src5::SRC5::SRC5CamelImpl::supportsInterface(@unsafe_state, interfaceId)
         }
     }
 
@@ -98,14 +122,6 @@ mod ERC721 {
         fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
             assert(self._exists(token_id), 'ERC721: invalid token ID');
             self._token_uri.read(token_id)
-        }
-    }
-
-    #[external(v0)]
-    impl ERC721MetadataCamelOnlyImpl of interface::IERC721MetadataCamelOnly<ContractState> {
-        fn tokenUri(self: @ContractState, tokenId: u256) -> felt252 {
-            assert(self._exists(tokenId), 'ERC721: invalid token ID');
-            self._token_uri.read(tokenId)
         }
     }
 
@@ -173,44 +189,59 @@ mod ERC721 {
         }
     }
 
-    #[external(v0)]
-    impl ERC721CamelOnlyImpl of interface::IERC721CamelOnly<ContractState> {
-        fn balanceOf(self: @ContractState, account: ContractAddress) -> u256 {
-            ERC721Impl::balance_of(self, account)
+    #[starknet::interface]
+    trait GoldenToken<TState> {
+        fn usage_count(self: @TState, token_id: u256) -> u256;
+        fn play(self: @TState, token_id: u256) -> ContractAddress;
+    }
+
+    #[generate_trait]
+    impl GoldenTokenImpl of GoldenTokenTrait {
+        fn mint(ref self: ContractState) {
+            let caller = get_caller_address();
+            assert(self._open.read(), 'mint not open');
+            assert(
+                get_block_timestamp().into() < self._open_edition_end.read(),
+                'open edition not available'
+            );
+
+            let tokenId = self._count.read();
+            let new_tokenId = tokenId + 1;
+
+            self._count.write(new_tokenId);
+            self._mint(caller, new_tokenId);
+
+            IERC20CamelDispatcher { contract_address: ETH.try_into().unwrap() }
+                .transferFrom(caller, self._dao.read(), MINT_COST);
         }
 
-        fn ownerOf(self: @ContractState, tokenId: u256) -> ContractAddress {
-            ERC721Impl::owner_of(self, tokenId)
-        }
+        fn open(ref self: ContractState) {
+            self.assert_only_owner();
+            assert(!self._open.read(), 'already open');
 
-        fn getApproved(self: @ContractState, tokenId: u256) -> ContractAddress {
-            ERC721Impl::get_approved(self, tokenId)
+            // open and set to 3 days from now
+            self._open_edition_end.write(get_block_timestamp().into() + 86400 * 3);
+            self._open.write(true);
         }
-
-        fn isApprovedForAll(
-            self: @ContractState, owner: ContractAddress, operator: ContractAddress
-        ) -> bool {
-            ERC721Impl::is_approved_for_all(self, owner, operator)
+        fn usage_count(ref self: @ContractState, token_id: u256) -> u256 {
+            self._usage_count.read(token_id)
         }
+        fn play(ref self: ContractState, token_id: u256) {
+            assert(self._exists(token_id), 'ERC721: invalid token ID');
 
-        fn setApprovalForAll(ref self: ContractState, operator: ContractAddress, approved: bool) {
-            ERC721Impl::set_approval_for_all(ref self, operator, approved)
-        }
+            let caller = get_caller_address();
+            let owner = self._owner_of(token_id);
+            assert(owner == caller, 'ERC721: not owner');
 
-        fn transferFrom(
-            ref self: ContractState, from: ContractAddress, to: ContractAddress, tokenId: u256
-        ) {
-            ERC721Impl::transfer_from(ref self, from, to, tokenId)
-        }
+            let last_use = self._last_use.read();
+            let usage_count = self._usage_count.read(token_id);
+            assert(
+                last_use + 86400 < get_block_timestamp().into() || usage_count == 0,
+                'ERC721: already used today'
+            );
 
-        fn safeTransferFrom(
-            ref self: ContractState,
-            from: ContractAddress,
-            to: ContractAddress,
-            tokenId: u256,
-            data: Span<felt252>
-        ) {
-            ERC721Impl::safe_transfer_from(ref self, from, to, tokenId, data)
+            self._last_use.write(get_block_timestamp().into());
+            self._usage_count.write(token_id, usage_count + 1);
         }
     }
 
@@ -338,18 +369,121 @@ mod ERC721 {
             assert(self._exists(token_id), 'ERC721: invalid token ID');
             self._token_uri.write(token_id, token_uri)
         }
+
+        fn assert_only_owner(self: @ContractState) {
+            let owner: ContractAddress = self._owner.read();
+            let caller: ContractAddress = get_caller_address();
+            assert(!caller.is_zero(), 'Caller is the zero address');
+            assert(caller == owner, 'Caller is not the owner');
+        }
+
+        fn _transfer_ownership(ref self: ContractState, new_owner: ContractAddress) {
+            let previous_owner: ContractAddress = self._owner.read();
+            self._owner.write(new_owner);
+            self
+                .emit(
+                    OwnershipTransferred { previous_owner: previous_owner, new_owner: new_owner }
+                );
+        }
+        fn _token_uri(self: @ContractState, token_id: u256) -> Array::<felt252> {
+            assert(self._exists(token_id), 'ERC721: invalid token ID');
+
+            let mut content = ArrayTrait::<felt252>::new();
+
+            // Name & description
+            content.append('data:application/json;utf8,');
+            content.append('{"name":"\"');
+            content.append('Golden Token');
+            content.append('","description":"Beasts"');
+
+            // // Metadata
+            // content.append(',"attributes":[{"trait_type":');
+            // content.append('"prefix","value":"');
+            // content.append(prefix);
+            // content.append('"},{"trait_type":');
+            // content.append('"name","value":"');
+            // content.append(name);
+            // content.append('"},{"trait_type":');
+            // content.append('"suffix","value":"');
+            // content.append(suffix);
+            // content.append('"},{"trait_type":');
+            // content.append('"type","value":"');
+            // content.append(btype);
+            // content.append('"},{"trait_type":');
+            // content.append('"tier","value":"');
+            // content.append(tier);
+            // content.append('"},{"trait_type":');
+            // content.append('"level","value":"');
+            // content.append(level);
+            content.append('"}]');
+
+            // Image
+            content.append(',"image":"');
+            content.append('data:image/svg+xml;utf8,<svg%20');
+            content.append('width=\\"100%\\"%20height=\\"100%\\');
+            content.append('"%20viewBox=\\"0%200%2020000%202');
+            content.append('0000\\"%20xmlns=\\"http://www.w3.');
+            content.append('org/2000/svg\\"><style>svg{backg');
+            content.append('round-image:url(');
+            content.append('data:image/png;base64,');
+
+            // TODO: add in SVG COIN
+            content.append('iVBORw0KGgoAAAANSUhEUgAAACAAAAA');
+            content.append('gCAIAAAD8GO2jAAAAAXNSR0IArs4c6Q');
+            content.append('AAAR5JREFUSImdVkkSwzAIw5k8uk/wr');
+            content.append('91DmgxFIOQwvQTLIFbX7JY1DWXNUq8K');
+            content.append('gRLr1RHK8NfGJzr2mpQQAnJGKUeDIJB');
+            content.append('7G8pItWk0hK/3ETDjhTnuo7n1ZIYAeP');
+            content.append('FLz202Mfuqj/RANCcq+1aphHRgRHi7o');
+            content.append('vUUkDhAhBVxpCnmQZwVKHQbxqQ08Zp2');
+            content.append('BKPXL5Vw5Buf7I8jvYxE0svKvjusCxY');
+            content.append('TgtkjQTd0yPT59iOAs0VwdoT+H8cXY1');
+            content.append('zpwzCdyBGX69ZaZbL1mCj0LQzaw/T5x');
+            content.append('NSpqb/l5+CyRR4Nz6Cyrk/43wUzqeAV');
+            content.append('nqFDg4klSVey5I/oK+5r3jVo7fLM7la');
+            content.append('evewVA7UAol1u1H/GB+fF0DbDoadi63');
+            content.append('/GRgths+o+1rQvxnQq3zSqGWEAAAAAS');
+            content.append('UVORK5CYII=');
+
+            content.append(');background-repeat:no-repeat;b');
+            content.append('ackground-size:contain;backgrou');
+            content.append('nd-position:center;image-render');
+            content.append('ing:-webkit-optimize-contrast;-');
+            content.append('ms-interpolation-mode:nearest-n');
+            content.append('eighbor;image-rendering:-moz-cr');
+            content.append('isp-edges;image-rendering:pixel');
+            content.append('ated;}</style></svg>"}');
+
+            content
+        }
+    }
+
+
+    #[external(v0)]
+    impl OwnableImpl of ownable::interface::IOwnable<ContractState> {
+        fn owner(self: @ContractState) -> ContractAddress {
+            self._owner.read()
+        }
+
+        fn transfer_ownership(ref self: ContractState, new_owner: ContractAddress) {
+            assert(!new_owner.is_zero(), 'New owner is the zero address');
+            self.assert_only_owner();
+            self._transfer_ownership(new_owner);
+        }
+
+        fn renounce_ownership(ref self: ContractState) {
+            self.assert_only_owner();
+            self._transfer_ownership(Zeroable::zero());
+        }
     }
 
     #[internal]
     fn _check_on_erc721_received(
         from: ContractAddress, to: ContractAddress, token_id: u256, data: Span<felt252>
     ) -> bool {
-        if (DualCaseSRC5 {
-            contract_address: to
-        }.supports_interface(interface::IERC721_RECEIVER_ID)) {
-            DualCaseERC721Receiver {
-                contract_address: to
-            }
+        if (DualCaseSRC5 { contract_address: to }
+            .supports_interface(interface::IERC721_RECEIVER_ID)) {
+            DualCaseERC721Receiver { contract_address: to }
                 .on_erc721_received(
                     get_caller_address(), from, token_id, data
                 ) == interface::IERC721_RECEIVER_ID
