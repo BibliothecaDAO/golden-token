@@ -4,4 +4,10 @@ version = "0.1.0"
 
 [dependencies]
 openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts", rev = "05429e4" }
-starknet = "2.1.0"
+starknet = "2.1.1"
+
+[lib]
+
+[[target.starknet-contract]]
+allowed-libfuncs-list.name = "experimental"
+allowed-libfuncs = true

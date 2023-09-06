@@ -192,11 +192,18 @@ mod ERC721 {
     #[starknet::interface]
     trait GoldenToken<TState> {
         fn usage_count(self: @TState, token_id: u256) -> u256;
-        fn play(self: @TState, token_id: u256) -> ContractAddress;
+        fn play(ref self: TState, token_id: u256);
+        fn can_play(ref self: TState, token_id: u256) -> bool;
+        fn last_usage(ref self: TState, token_id: u256) -> u256;
+        fn mint(ref self: TState);
+        fn open(ref self: TState);
     }
 
-    #[generate_trait]
-    impl GoldenTokenImpl of GoldenTokenTrait {
+    const DAY: felt252 = 86400;
+    const OPEN_EDITION_LENGTH_DAYS: u256 = 3;
+
+    #[external(v0)]
+    impl GoldenTokenImpl of GoldenToken<ContractState> {
         fn mint(ref self: ContractState) {
             let caller = get_caller_address();
             assert(self._open.read(), 'mint not open');
@@ -220,28 +227,38 @@ mod ERC721 {
             assert(!self._open.read(), 'already open');
 
             // open and set to 3 days from now
-            self._open_edition_end.write(get_block_timestamp().into() + 86400 * 3);
+            self
+                ._open_edition_end
+                .write(get_block_timestamp().into() + DAY.into() * OPEN_EDITION_LENGTH_DAYS.into());
             self._open.write(true);
         }
-        fn usage_count(ref self: @ContractState, token_id: u256) -> u256 {
+
+        fn usage_count(self: @ContractState, token_id: u256) -> u256 {
             self._usage_count.read(token_id)
         }
+
+        fn can_play(ref self: ContractState, token_id: u256) -> bool {
+            self.last_usage(token_id)
+                + DAY.into() < get_block_timestamp().into() || self.usage_count(token_id) == 0
+        }
+
         fn play(ref self: ContractState, token_id: u256) {
             assert(self._exists(token_id), 'ERC721: invalid token ID');
+            assert(self._owner_of(token_id) == get_caller_address(), 'ERC721: not owner');
 
-            let caller = get_caller_address();
-            let owner = self._owner_of(token_id);
-            assert(owner == caller, 'ERC721: not owner');
-
-            let last_use = self._last_use.read();
-            let usage_count = self._usage_count.read(token_id);
+            let usage_count = self.usage_count(token_id);
             assert(
-                last_use + 86400 < get_block_timestamp().into() || usage_count == 0,
+                self.last_usage(token_id)
+                    + DAY.into() < get_block_timestamp().into() || self.usage_count(token_id) == 0,
                 'ERC721: already used today'
             );
 
             self._last_use.write(get_block_timestamp().into());
             self._usage_count.write(token_id, usage_count + 1);
+        }
+
+        fn last_usage(ref self: ContractState, token_id: u256) -> u256 {
+            self._last_use.read()
         }
     }
 
