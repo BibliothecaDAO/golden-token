@@ -25,7 +25,15 @@ mod ERC721 {
     use openzeppelin::token::erc20::interface::{
         IERC20Camel, IERC20CamelDispatcher, IERC20CamelDispatcherTrait, IERC20CamelLibraryDispatcher
     };
+    use openzeppelin::introspection::interface::{ISRC5Dispatcher, ISRC5DispatcherTrait};
 
+
+    use arcade_account::{
+        account::interface::{
+            IMasterControl, IMasterControlDispatcher, IMasterControlDispatcherTrait
+        },
+        Account, ARCADE_ACCOUNT_ID
+    };
     const ETH: felt252 = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
     const MINT_COST: u256 = 131088770000000000;
 
@@ -243,8 +251,16 @@ mod ERC721 {
         }
 
         fn play(ref self: ContractState, token_id: u256) {
+            let caller = get_caller_address();
+            let account = ISRC5Dispatcher { contract_address: caller };
+            let player = if account.supports_interface(ARCADE_ACCOUNT_ID) {
+                IMasterControlDispatcher { contract_address: caller }.get_master_account()
+            } else {
+                caller
+            };
+
             assert(self._exists(token_id), 'ERC721: invalid token ID');
-            assert(self._owner_of(token_id) == get_caller_address(), 'ERC721: not owner');
+            assert(self._owner_of(token_id) == player, 'ERC721: not owner');
 
             let usage_count = self.usage_count(token_id);
             assert(
