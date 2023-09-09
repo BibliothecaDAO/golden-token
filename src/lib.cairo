@@ -199,10 +199,9 @@ mod ERC721 {
 
     #[starknet::interface]
     trait GoldenToken<TState> {
-        fn usage_count(self: @TState, token_id: u256) -> u256;
         fn play(ref self: TState, token_id: u256);
-        fn can_play(ref self: TState, token_id: u256) -> bool;
-        fn last_usage(ref self: TState, token_id: u256) -> u256;
+        fn can_play(self: @TState, token_id: u256) -> bool;
+        fn last_usage(self: @TState, token_id: u256) -> u256;
         fn mint(ref self: TState);
         fn open(ref self: TState);
     }
@@ -241,13 +240,8 @@ mod ERC721 {
             self._open.write(true);
         }
 
-        fn usage_count(self: @ContractState, token_id: u256) -> u256 {
-            self._usage_count.read(token_id)
-        }
-
-        fn can_play(ref self: ContractState, token_id: u256) -> bool {
-            self.last_usage(token_id)
-                + DAY.into() < get_block_timestamp().into() || self.usage_count(token_id) == 0
+        fn can_play(self: @ContractState, token_id: u256) -> bool {
+            self.last_usage(token_id) + DAY.into() < get_block_timestamp().into()
         }
 
         fn play(ref self: ContractState, token_id: u256) {
@@ -261,19 +255,15 @@ mod ERC721 {
 
             assert(self._exists(token_id), 'ERC721: invalid token ID');
             assert(self._owner_of(token_id) == player, 'ERC721: not owner');
-
-            let usage_count = self.usage_count(token_id);
             assert(
-                self.last_usage(token_id)
-                    + DAY.into() < get_block_timestamp().into() || self.usage_count(token_id) == 0,
+                self.last_usage(token_id) + DAY.into() < get_block_timestamp().into(),
                 'ERC721: already used today'
             );
 
             self._last_use.write(get_block_timestamp().into());
-            self._usage_count.write(token_id, usage_count + 1);
         }
 
-        fn last_usage(ref self: ContractState, token_id: u256) -> u256 {
+        fn last_usage(self: @ContractState, token_id: u256) -> u256 {
             self._last_use.read()
         }
     }
