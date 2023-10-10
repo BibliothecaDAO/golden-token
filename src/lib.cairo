@@ -52,7 +52,8 @@ mod ERC721 {
         _owner: ContractAddress,
         _last_use: u256,
         _usage_count: LegacyMap<u256, u256>,
-        _dao: ContractAddress
+        _dao: ContractAddress,
+        _play_approvals: LegacyMap<(u256, ContractAddress), bool>,
     }
 
 
@@ -199,11 +200,15 @@ mod ERC721 {
 
     #[starknet::interface]
     trait GoldenToken<TState> {
-        fn play(ref self: TState, token_id: u256);
+        fn play(ref self: TState, token_id: u256, caller: ContractAddress);
         fn can_play(self: @TState, token_id: u256) -> bool;
         fn last_usage(self: @TState, token_id: u256) -> u256;
         fn mint(ref self: TState);
         fn open(ref self: TState);
+        fn caller_approved(self: @TState, token_id: u256) -> bool;
+        fn set_approved_to_call(
+            ref self: ContractState, token_id: u256, operator: ContractAddress, approved: bool
+        );
     }
 
     const DAY: felt252 = 86400;
@@ -211,6 +216,17 @@ mod ERC721 {
 
     #[external(v0)]
     impl GoldenTokenImpl of GoldenToken<ContractState> {
+        fn caller_approved(self: @ContractState, token_id: u256) -> bool {
+            self._play_approvals.read((token_id, get_caller_address()))
+        }
+        fn set_approved_to_call(
+            ref self: ContractState, token_id: u256, operator: ContractAddress, approved: bool
+        ) {
+            // set approval for caller to call
+            assert(self._owner_of(token_id) == get_caller_address(), 'ERC721: not owner');
+            self._play_approvals.write((token_id, operator), approved);
+        }
+
         fn mint(ref self: ContractState) {
             let caller = get_caller_address();
             assert(self._open.read(), 'mint not open');
@@ -244,8 +260,12 @@ mod ERC721 {
             self.last_usage(token_id) + DAY.into() < get_block_timestamp().into()
         }
 
-        fn play(ref self: ContractState, token_id: u256) {
-            let caller = get_caller_address();
+        fn play(ref self: ContractState, token_id: u256, caller: ContractAddress) {
+            // Check calling contract is approved
+            // this might need to be another method purely for play
+            // get_caller_address() is the contract address calling this method
+            assert(self.caller_approved(token_id), 'not approved to play');
+
             let account = ISRC5Dispatcher { contract_address: caller };
             let player = if account.supports_interface(ARCADE_ACCOUNT_ID) {
                 IMasterControlDispatcher { contract_address: caller }.get_master_account()
