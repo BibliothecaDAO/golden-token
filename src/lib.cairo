@@ -51,6 +51,7 @@ mod ERC721 {
         _open: bool,
         _owner: ContractAddress,
         _dao: ContractAddress,
+        _eth: ContractAddress
     }
 
 
@@ -96,11 +97,13 @@ mod ERC721 {
         name: felt252,
         symbol: felt252,
         owner: ContractAddress,
-        dao: ContractAddress
+        dao: ContractAddress,
+        eth: ContractAddress
     ) {
         self.initializer(name, symbol);
         self._owner.write(owner);
         self._dao.write(dao);
+        self._eth.write(eth);
     }
 
     //
@@ -197,15 +200,8 @@ mod ERC721 {
 
     #[starknet::interface]
     trait GoldenToken<TState> {
-        // fn play(ref self: TState, token_id: u256, caller: ContractAddress);
-        // fn can_play(self: @TState, token_id: u256) -> bool;
-        // fn last_usage(self: @TState, token_id: u256) -> u256;
         fn mint(ref self: TState);
         fn open(ref self: TState);
-    // fn caller_approved(self: @TState, token_id: u256) -> bool;
-    // fn set_approved_to_call(
-    //     ref self: ContractState, token_id: u256, operator: ContractAddress, approved: bool
-    // );
     }
 
     const DAY: felt252 = 86400;
@@ -227,7 +223,7 @@ mod ERC721 {
             self._count.write(new_tokenId);
             self._mint(caller, new_tokenId);
 
-            IERC20CamelDispatcher { contract_address: ETH.try_into().unwrap() }
+            IERC20CamelDispatcher { contract_address: self._eth.read() }
                 .transferFrom(caller, self._dao.read(), MINT_COST);
         }
 
