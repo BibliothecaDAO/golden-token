@@ -16,4 +16,4 @@ declare_output=$(./starkli declare /workspaces/golden-token/target/dev/goldenTok
 class_hash=$(echo "$declare_output" | grep -oE '0x[0-9a-fA-F]+')
 
 # Deploy contract
-./starkli deploy $class_hash $GOLDEN_TOKEN_NAME $GOLDEN_TOKEN_SYMBOL $OWNER $DAO_ADDRESS --account $STARKNET_ACCOUNT --private-key $PRIVATE_KEY
+./starkli deploy $class_hash $GOLDEN_TOKEN_NAME $GOLDEN_TOKEN_SYMBOL $OWNER $DAO_ADDRESS $ETH_ADDRESS --account $STARKNET_ACCOUNT --private-key $PRIVATE_KEY
