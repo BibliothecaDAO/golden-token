@@ -384,32 +384,11 @@ mod ERC721 {
 
             let mut content = ArrayTrait::<felt252>::new();
 
-            // Name & description
+            // Name & Description
             content.append('data:application/json;utf8,');
-            content.append('{"name":"\"');
-            content.append('Golden Token');
-            content.append('","description":"Beasts"');
-
-            // // Metadata
-            // content.append(',"attributes":[{"trait_type":');
-            // content.append('"prefix","value":"');
-            // content.append(prefix);
-            // content.append('"},{"trait_type":');
-            // content.append('"name","value":"');
-            // content.append(name);
-            // content.append('"},{"trait_type":');
-            // content.append('"suffix","value":"');
-            // content.append(suffix);
-            // content.append('"},{"trait_type":');
-            // content.append('"type","value":"');
-            // content.append(btype);
-            // content.append('"},{"trait_type":');
-            // content.append('"tier","value":"');
-            // content.append(tier);
-            // content.append('"},{"trait_type":');
-            // content.append('"level","value":"');
-            // content.append(level);
-            content.append('"}]');
+            content.append('{"name":"Golden Token",');
+            content.append('"description":"One free game,');
+            content.append('every day, forever"');
 
             // Image
             content.append(',"image":"');
@@ -421,23 +400,39 @@ mod ERC721 {
             content.append('round-image:url(');
             content.append('data:image/png;base64,');
 
-            // TODO: add in SVG COIN
-            content.append('iVBORw0KGgoAAAANSUhEUgAAACAAAAA');
-            content.append('gCAIAAAD8GO2jAAAAAXNSR0IArs4c6Q');
-            content.append('AAAR5JREFUSImdVkkSwzAIw5k8uk/wr');
-            content.append('91DmgxFIOQwvQTLIFbX7JY1DWXNUq8K');
-            content.append('gRLr1RHK8NfGJzr2mpQQAnJGKUeDIJB');
-            content.append('7G8pItWk0hK/3ETDjhTnuo7n1ZIYAeP');
-            content.append('FLz202Mfuqj/RANCcq+1aphHRgRHi7o');
-            content.append('vUUkDhAhBVxpCnmQZwVKHQbxqQ08Zp2');
-            content.append('BKPXL5Vw5Buf7I8jvYxE0svKvjusCxY');
-            content.append('TgtkjQTd0yPT59iOAs0VwdoT+H8cXY1');
-            content.append('zpwzCdyBGX69ZaZbL1mCj0LQzaw/T5x');
-            content.append('NSpqb/l5+CyRR4Nz6Cyrk/43wUzqeAV');
-            content.append('nqFDg4klSVey5I/oK+5r3jVo7fLM7la');
-            content.append('evewVA7UAol1u1H/GB+fF0DbDoadi63');
-            content.append('/GRgths+o+1rQvxnQq3zSqGWEAAAAAS');
-            content.append('UVORK5CYII=');
+            // Golden Token Base64 Encoded PNG
+            content.append('iVBORw0KGgoAAAANSUhEUgAAAUAAAAF');
+            content.append('ABAMAAAA/vriZAAAAD1BMVEUAAAD4+A');
+            content.append('CJSQL/pAD///806TM9AAACgUlEQVR4A');
+            content.append('WKgGAjiBUqoANDOHdzGDcRQAK3BLaSF');
+            content.append('tJD+awriQwh8zDd2srlQfjxJGGr4xhf');
+            content.append('Csuj3ywEC7gcCAgKeCD9bVC8gICAg4H');
+            content.append('cDVtGvP/G5MKIXvKF8MhAQEBAQMFifo');
+            content.append('rmK+Iho8uh8zwMCAgICAk65aouaEVM9');
+            content.append('WL3zAQICAgJuBqYtth7brEZHC2CcMI6');
+            content.append('Z1FQCAgICAm4GTnZsGL8WRaW4inPVV3');
+            content.append('eAgICAgI8CVls0uIr+WnnR7wABAQEBF');
+            content.append('wAvbBn3ytrvuhIQEBAQcCvwa8IbygCm');
+            content.append('DRAQEBBwK7DbTt8A/OdWl7ZUAgICAgL');
+            content.append('uAp5slXD1+i2BzQYICAgIuBsYtigyf8');
+            content.append('2Z+GjRkhMYNQABAQEBdwFfsVXgRLd1Y');
+            content.append('Dl/yAEBAQEB9wDrO7OoOQtRvdpeGKec');
+            content.append('AAQEBATcCsxWd7qNwh1YItG15EYgICA');
+            content.append('gIOAopyudHp6FuApgTRlgKbkTCAgICA');
+            content.append('g4jhAl8NCz/u31W2+na4GAgICAgHFVh');
+            content.append('+ZPtkmJvEiuNeYMa4CAgICAgPlxWSxP');
+            content.append('nERhS0zE4XDR78rAyw4gICAgIGASYte');
+            content.append('UN1soJyV+CGOL7QEBAQEBnwTs20yl+t');
+            content.append('VZvFGLhTpUsxAICAgICJjKfORvvD06O');
+            content.append('cAL2zogICAgIODJFg+fvknL25vR+7nd');
+            content.append('CQQEBAQELMrYIeQ/XoxJvrItBAICAgI');
+            content.append('CpvK0w2l8pUak3Nn2AwEBAQEB6z+sj/');
+            content.append('1jin/yTlsFdT8QEBAQELAro1PF/lEpI');
+            content.append('lJGHgthAwQEBATcD8wI5dxOzRr1C7PO');
+            content.append('AgQEBAR8GjA7X1SqyjqxP0/cAJYDAQE');
+            content.append('BAQGDGt46cJ/JyQIEBAQEfD7w0nsl2g');
+            content.append('8EBAQEBPwNOZbOIEJQph0AAAAASUVOR');
+            content.append('K5CYII=');
 
             content.append(');background-repeat:no-repeat;b');
             content.append('ackground-size:contain;backgrou');
