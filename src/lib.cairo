@@ -389,7 +389,7 @@ mod ERC721 {
             // Name & Description
             content.append('data:application/json;utf8,');
             content.append('{"name":"Golden Token",');
-            content.append('"description":"One free game,');
+            content.append('"description":"One free game, ');
             content.append('every day, forever"');
 
             // Image
