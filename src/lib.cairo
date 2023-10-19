@@ -35,7 +35,8 @@ mod ERC721 {
         Account, ARCADE_ACCOUNT_ID
     };
     const ETH: felt252 = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
-    const MINT_COST: u256 = 131088770000000000;
+    // MAINNET TODO: UPDATE PRICE 
+    const MINT_COST: u256 = 990000000000;
 
     #[storage]
     struct Storage {
@@ -45,7 +46,6 @@ mod ERC721 {
         _balances: LegacyMap<ContractAddress, u256>,
         _token_approvals: LegacyMap<u256, ContractAddress>,
         _operator_approvals: LegacyMap<(ContractAddress, ContractAddress), bool>,
-        _token_uri: LegacyMap<u256, felt252>,
         _open_edition_end: u256,
         _count: u256,
         _open: bool,
@@ -118,8 +118,15 @@ mod ERC721 {
         }
     }
 
+    #[starknet::interface]
+    trait IERC721MetadataFeltArray<TState> {
+        fn name(self: @TState) -> felt252;
+        fn symbol(self: @TState) -> felt252;
+        fn token_uri(self: @TState, token_id: u256) -> Array<felt252>;
+    }
+
     #[external(v0)]
-    impl ERC721MetadataImpl of interface::IERC721Metadata<ContractState> {
+    impl ERC721MetadataImpl of IERC721MetadataFeltArray<ContractState> {
         fn name(self: @ContractState) -> felt252 {
             self._name.read()
         }
@@ -128,9 +135,9 @@ mod ERC721 {
             self._symbol.read()
         }
 
-        fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
+        fn token_uri(self: @ContractState, token_id: u256) -> Array<felt252> {
             assert(self._exists(token_id), 'ERC721: invalid token ID');
-            self._token_uri.read(token_id)
+            self._token_uri(token_id)
         }
     }
 
@@ -357,11 +364,6 @@ mod ERC721 {
             assert(
                 _check_on_erc721_received(from, to, token_id, data), 'ERC721: safe transfer failed'
             );
-        }
-
-        fn _set_token_uri(ref self: ContractState, token_id: u256, token_uri: felt252) {
-            assert(self._exists(token_id), 'ERC721: invalid token ID');
-            self._token_uri.write(token_id, token_uri)
         }
 
         fn assert_only_owner(self: @ContractState) {
