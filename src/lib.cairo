@@ -36,7 +36,7 @@ mod ERC721 {
     };
     const ETH: felt252 = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
     // MAINNET TODO: UPDATE PRICE 
-    const MINT_COST: u256 = 990000000000;
+    const MINT_COST: u256 = 99000;
 
     #[storage]
     struct Storage {
@@ -212,7 +212,7 @@ mod ERC721 {
     }
 
     const DAY: felt252 = 86400;
-    const OPEN_EDITION_LENGTH_DAYS: u256 = 3;
+    const OPEN_EDITION_LENGTH_DAYS: u256 = 14;
 
     #[external(v0)]
     impl GoldenTokenImpl of GoldenToken<ContractState> {
