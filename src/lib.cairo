@@ -212,7 +212,7 @@ mod ERC721 {
     }
 
     const DAY: felt252 = 86400;
-    const OPEN_EDITION_LENGTH_DAYS: u256 = 14;
+    const OPEN_EDITION_LENGTH_DAYS: u256 = 21;
 
     #[external(v0)]
     impl GoldenTokenImpl of GoldenToken<ContractState> {
