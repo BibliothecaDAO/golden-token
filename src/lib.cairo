@@ -34,9 +34,7 @@ mod ERC721 {
         },
         Account, ARCADE_ACCOUNT_ID
     };
-    const ETH: felt252 = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
-    // MAINNET TODO: UPDATE PRICE 
-    const MINT_COST: u256 = 99000;
+    const MINT_COST: u256 = 90000000000000000;
 
     #[storage]
     struct Storage {
