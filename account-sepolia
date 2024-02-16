@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "variant": {
+    "type": "open_zeppelin",
+    "version": 1,
+    "public_key": "0x3e851144750a495172fd41eb7d84e8c97402ed3fd680a5e7f474d9452b2c952",
+    "legacy": false
+  },
+  "deployment": {
+    "status": "deployed",
+    "class_hash": "0x4c6d6cf894f8bc96bb9c525e6853e5483177841f7388f74a46cfda6f028c755",
+    "address": "0x3dba48aee5fd05933d333b57f8ab7caa953b97a257b910b6dd2bc21eb9e975b"
+  }
+}
