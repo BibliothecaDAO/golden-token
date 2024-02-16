@@ -9,11 +9,13 @@
 mod GoldenToken {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::ERC721Component;
-    use starknet::ContractAddress;
-    use starknet::{get_caller_address, get_block_timestamp};
+    use openzeppelin::access::ownable::OwnableComponent;
+
+    use starknet::{get_caller_address, get_block_timestamp, ContractAddress};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
+    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
     // ERC721
     #[abi(embed_v0)]
@@ -31,13 +33,24 @@ mod GoldenToken {
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
 
+    // Ownable
+    #[abi(embed_v0)]
+    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
+
     #[storage]
     struct Storage {
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        #[substorage(v0)]
+        ownable: OwnableComponent::Storage,
         count: felt252,
+        open_edition_end: u256,
+        open: bool,
+        owner: ContractAddress,
+        dao: ContractAddress,
+        eth: ContractAddress
     }
 
     #[event]
@@ -46,7 +59,9 @@ mod GoldenToken {
         #[flat]
         ERC721Event: ERC721Component::Event,
         #[flat]
-        SRC5Event: SRC5Component::Event
+        SRC5Event: SRC5Component::Event,
+        #[flat]
+        OwnableEvent: OwnableComponent::Event,
     }
 
     mod Errors {
@@ -67,7 +82,12 @@ mod GoldenToken {
     #[starknet::interface]
     trait IGoldenToken<TContractState> {
         fn mint(ref self: TContractState);
+        fn open(ref self: TContractState);
     }
+
+    const MINT_COST: u256 = 90000000000000000;
+    const DAY: felt252 = 86400;
+    const OPEN_EDITION_LENGTH_DAYS: u256 = 21;
 
     #[abi(embed_v0)]
     impl GoldenTokenImpl of IGoldenToken<ContractState> {
@@ -80,6 +100,17 @@ mod GoldenToken {
             self.erc721._mint(get_caller_address(), current_count.into());
 
             self.count.write(current_count);
+        }
+        fn open(ref self: ContractState) {
+            assert(self.ownable.owner() == get_caller_address(), 'only owner');
+
+            assert(!self.open.read(), 'already open');
+
+            // open and set to 3 days from now
+            self
+                .open_edition_end
+                .write(get_block_timestamp().into() + DAY.into() * OPEN_EDITION_LENGTH_DAYS.into());
+            self.open.write(true);
         }
     }
 
