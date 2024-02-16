@@ -6,7 +6,7 @@
 /// The ERC721 contract offers a batch-mint mechanism that
 /// can only be executed once upon contract construction.
 #[starknet::contract]
-mod ERC721 {
+mod GoldenToken {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::ERC721Component;
     use starknet::ContractAddress;
