@@ -7,6 +7,8 @@
 /// can only be executed once upon contract construction.
 #[starknet::contract]
 mod GoldenToken {
+    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
+    use openzeppelin::access::ownable::interface::IOwnable;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::ERC721Component;
     use openzeppelin::access::ownable::OwnableComponent;
@@ -82,7 +84,7 @@ mod GoldenToken {
         let name: felt252 = 'GoldenToken';
         let symbol: felt252 = 'GTKN';
 
-        self.owner.write(owner);
+        self.ownable.initializer(owner);
         self.dao.write(dao);
         self.eth.write(eth);
 
@@ -112,7 +114,7 @@ mod GoldenToken {
             self.count.write(current_count);
         }
         fn open(ref self: ContractState) {
-            assert(self.ownable.owner() == get_caller_address(), 'only owner');
+            self.ownable.assert_only_owner();
 
             assert(!self.open.read(), 'already open');
 
