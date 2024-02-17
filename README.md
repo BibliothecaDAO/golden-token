@@ -7,11 +7,13 @@
 The .devcontainer container will automatically generate key pair and deploy a dev account just follow prompts
 
 ### Contract Deployment
+
 ```bash
 /bin/bash /workspaces/golden-token/scripts/deploy_contract.sh
 ```
 
 ## Non-VSCode Setup
+
 ```console
 starkli declare target/dev/goldenToken_ERC721.sierra.json --account ./account --keystore ./keys
 
@@ -23,3 +25,5 @@ export DAO_ADDRESS=0x020b96923a9e60f63a1829d440a03cf680768cadbc8fe737f7138025881
 starkli deploy 0x007ccf8c0a9a27392a68ec91db0d8005fd6d10ce0039a0627c8e0b0af7a73d7d $GOLDEN_TOKEN_NAME $GOLDEN_TOKEN_SYMBOL $OWNER $DAO_ADDRESS --account ./account --keystore ./keys
 ```
 
+starkli declare /Users/os/Documents/code/biblio/golden-token/target/dev/golden_token_ERC721.contract_class.json --account ./account-sepolia --keystore ./keys
+starkli deploy 0x07523d0f2f1b4f2d387fe5548fa7c0a7ab77f6e49241f26c6aa8682f808379b0 --account ./account-sepolia --keystore ./keys

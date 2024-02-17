@@ -1,11 +1,11 @@
 [package]
-name = "goldenToken"
+name = "golden_token"
 version = "0.1.0"
 
 [dependencies]
-openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.7.0" }
-starknet = "2.1.1"
-arcade_account = { git = "https://github.com/BibliothecaDAO/arcade-account" }
+openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.9.0" }
+starknet = "2.4.0"
+arcade_account = { git = "https://github.com/BibliothecaDAO/arcade-account", branch = "next" }
 
 [lib]
 
