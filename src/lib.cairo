@@ -72,9 +72,19 @@ mod GoldenToken {
     /// Mints the `token_ids` tokens to `recipient` and sets
     /// each token's URI.
     #[constructor]
-    fn constructor(ref self: ContractState) {
+    fn constructor(
+        ref self: ContractState,
+        symbol: felt252,
+        owner: ContractAddress,
+        dao: ContractAddress,
+        eth: ContractAddress
+    ) {
         let name: felt252 = 'GoldenToken';
         let symbol: felt252 = 'GTKN';
+
+        self.owner.write(owner);
+        self.dao.write(dao);
+        self.eth.write(eth);
 
         self.erc721.initializer(name, symbol);
     }
